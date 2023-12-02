@@ -1,13 +1,10 @@
-use crate::files::{contents, lines};
-use crate::geometry::overlaps;
+use crate::files::contents;
 use crate::strings::find_indices;
 use anyhow::Result;
 use itertools::Itertools;
 use map_macro::hash_map;
 use ndarray::prelude::*;
 use std::fmt::{Debug, Display, Write};
-use std::iter::zip;
-use std::ptr::replace;
 
 type PuzzleResult = i32;
 
@@ -110,7 +107,6 @@ mod tests {
     use crate::strings::SkipEmptyLines;
     use itertools::Itertools;
     use nofmt;
-    use pretty_assertions::assert_eq as pretty_assert_eq;
     use textwrap::dedent;
 
     fn to_vec(f: Vec<&str>) -> Vec<String> {
