@@ -98,7 +98,7 @@ fn parse_digits(line: &str) -> i32 {
         .unwrap();
     // Some "clever" math so we don't need to parse strings :P
     let ret = first_digit * 10 + second_digit;
-    return dbg!(ret);
+    return ret;
 }
 
 #[cfg(test)]

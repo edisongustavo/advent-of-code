@@ -46,4 +46,5 @@ fn main() {
     println!("2023");
     println!("********");
     println!("Day1: {:?}", solutions2023::day1::solution());
+    println!("Day2: {:?}", solutions2023::day2::solution());
 }

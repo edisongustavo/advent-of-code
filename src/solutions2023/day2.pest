@@ -1,0 +1,12 @@
+
+color = { "blue" | "green" | "red" }
+number_of_balls = { ASCII_DIGIT+ }
+ball = { number_of_balls ~ color }
+ball_set = { ball ~ ("," ~ ball)* }
+game_specs = { ball_set ~ (";" ~ ball_set)* }
+
+game_id = { ASCII_DIGIT+ }
+Game = { "Game" ~ game_id ~ ":" ~ game_specs}
+Games = { Game ~ (NEWLINE ~ Game)* }
+Grammar = _{ SOI ~ Games ~ EOI }
+WHITESPACE = _{ " " }
