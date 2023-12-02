@@ -1,0 +1,24 @@
+[package]
+name = "advent-of-code"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+itertools = "0.11.0"
+map-macro = "0.2.6"
+regex = "1.10.2"
+textwrap = "0.16.0"
+indextree = "4.6.0"
+ndarray = "0.15.6"
+nofmt = "1.0.0"
+derive_builder = "0.12.0"
+pest = {  version="2.7.5", features = ["pretty-print"] }
+pest_derive = "2.7.5"
+anyhow = "1.0.75"
+clap = "4.4.10"
+
+[dev-dependencies]
+expect-test = "1.4.1"
+pretty_assertions = "1.4.0"

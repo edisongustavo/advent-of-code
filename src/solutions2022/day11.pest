@@ -1,0 +1,28 @@
+WHITESPACE = _{ " " }
+
+test_term = { "divisible" }
+test = { test_term ~ "by" ~ ASCII_DIGIT+ }
+
+op_bin = { "+" | "*" | "-" | "/" }
+variable = { "new" | "old" }
+term = { variable | ASCII_DIGIT+ }
+expression = { term ~ (op_bin ~ term)? }
+statement = _{ variable ~ "=" ~ expression }
+
+item = { ASCII_DIGIT+ }
+items = { item ~ ("," ~ item)* }
+
+monkey_id = { ASCII_DIGIT+ }
+test_true_monkey_id = { monkey_id }
+test_false_monkey_id = { monkey_id }
+operation = { statement }
+Monkey = {
+    "Monkey" ~ monkey_id ~ ":" ~ NEWLINE ~
+    "Starting items:" ~ items ~ NEWLINE ~
+    "Operation:" ~ operation ~ NEWLINE ~
+    "Test:" ~ test ~ NEWLINE ~
+    "If true: throw to monkey " ~ test_true_monkey_id ~ NEWLINE ~
+    "If false: throw to monkey " ~ test_false_monkey_id
+}
+Monkeys = { Monkey ~ (NEWLINE ~ NEWLINE+ ~ Monkey)* }
+Grammar = _{ SOI ~ Monkeys ~ EOI }
