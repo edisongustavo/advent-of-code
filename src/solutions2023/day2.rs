@@ -1,6 +1,5 @@
 use crate::files::contents;
-use anyhow::{Context, Result};
-use derive_builder::Builder;
+use anyhow::{ensure, Context, Result};
 use itertools::Itertools;
 use ndarray::prelude::*;
 use pest::iterators::Pair;
@@ -50,14 +49,13 @@ fn parse(input: &String) -> Result<Vec<Game>> {
     for game in games {
         match game.as_rule() {
             Rule::Game => {
-                let game = parse_game(game);
+                let game_str = format!("Invalid game ⮞ {} ⮜", game.as_str());
+                let game = parse_game(game).context(game_str)?;
                 ret.push(game);
             }
             Rule::EOI => (),
             _ => {
                 println!("{:?}", game.as_rule());
-                // let mut inner_rules = game.into_inner(); // { name }
-                // let foo = inner_rules.next().unwrap();
                 unreachable!()
             }
         }
@@ -65,7 +63,7 @@ fn parse(input: &String) -> Result<Vec<Game>> {
     Ok(ret)
 }
 
-fn parse_game(pair: Pair<Rule>) -> Game {
+fn parse_game(pair: Pair<Rule>) -> Result<Game> {
     let mut game = Game::default();
 
     let mut inner = pair.into_inner();
@@ -76,12 +74,14 @@ fn parse_game(pair: Pair<Rule>) -> Game {
 
     let game_specs = inner.next().unwrap();
     for ball_sets in game_specs.into_inner() {
-        game.ball_sets.push(parse_ball_set(ball_sets));
+        let ball_sets_str = format!("Invalid set of balls ⮞ {} ⮜", ball_sets.as_str());
+        let ball_set = parse_ball_set(ball_sets).context(ball_sets_str)?;
+        game.ball_sets.push(ball_set);
     }
-    game
+    Ok(game)
 }
 
-fn parse_ball_set(pair: Pair<Rule>) -> BallSet {
+fn parse_ball_set(pair: Pair<Rule>) -> Result<BallSet> {
     match pair.as_rule() {
         Rule::ball_set => (),
         _ => panic!(),
@@ -95,28 +95,31 @@ fn parse_ball_set(pair: Pair<Rule>) -> BallSet {
         let color = inner.next().unwrap().as_str();
         match color {
             "red" => {
+                ensure!(ret.red == 0, "Duplicated red color");
                 ret.red = number_of_balls;
             }
             "green" => {
+                ensure!(ret.green == 0, "Duplicated green color");
                 ret.green = number_of_balls;
             }
             "blue" => {
+                ensure!(ret.blue == 0, "Duplicated blue color");
                 ret.blue = number_of_balls;
             }
             _ => unreachable!(),
         }
     }
-    ret
+    Ok(ret)
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct BallSet {
     red: usize,
     green: usize,
     blue: usize,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct Game {
     id: usize,
     ball_sets: Vec<BallSet>,
@@ -128,6 +131,7 @@ struct GamesParser;
 
 #[cfg(test)]
 mod tests {
+    use std::error::Error;
     use super::*;
     use crate::strings::SkipEmptyLines;
     use itertools::Itertools;
@@ -164,6 +168,23 @@ mod tests {
         let input_string = program();
         let actual = inner(&input_string)?.1;
         assert_eq!(actual, 2286);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_duplicate_colors() -> Result<()> {
+        let error = parse(&"Game 1: 3 blue, 4 blue".to_string()).unwrap_err();
+        assert_eq!(error.root_cause().to_string(), "Duplicated blue color");
+
+        let error = parse(&"Game 1: 1 red, 2 green; 3 blue, 4 blue".to_string()).unwrap_err();
+        assert_eq!(error.root_cause().to_string(), "Duplicated blue color");
+
+        let error = parse(&dedent("
+            Game 1: 1 red, 2 green
+            Game 2: 1 red, 2 green; 3 blue, 4 blue"
+        ).skip_empty_start_lines()).unwrap_err();
+        assert_eq!(error.root_cause().to_string(), "Duplicated blue color");
+        assert_eq!(format!("{:#}", error), "Invalid game ⮞ Game 2: 1 red, 2 green; 3 blue, 4 blue ⮜: Invalid set of balls ⮞ 3 blue, 4 blue ⮜: Duplicated blue color");
         Ok(())
     }
 }
