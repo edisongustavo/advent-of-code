@@ -17,6 +17,7 @@ mod solutions2023;
 mod files;
 mod geometry;
 mod strings;
+mod array;
 
 fn main() {
     // println!("Day1 part1: {}", part1());
@@ -47,4 +48,5 @@ fn main() {
     println!("********");
     println!("Day1: {:?}", solutions2023::day1::solution());
     println!("Day2: {:?}", solutions2023::day2::solution());
+    println!("Day3: {:?}", solutions2023::day3::solution());
 }

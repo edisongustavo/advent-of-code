@@ -1,9 +1,10 @@
 use crate::files::lines;
-use itertools::{enumerate, Itertools};
+use itertools::Itertools;
 use ndarray::prelude::*;
 use std::cmp::max;
 use std::fmt::{Debug, Formatter};
 use std::iter::zip;
+use crate::array;
 
 type PuzzleResult = usize;
 
@@ -145,20 +146,9 @@ impl Grid {
 impl Debug for Grid {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let elems = &self.elems;
-        fmt_array2d(f, elems)?;
+        array::fmt_array2d(f, elems)?;
         Ok(())
     }
-}
-
-fn fmt_array2d(f: &mut Formatter, elems: &Array2<u8>) -> std::fmt::Result {
-    for (i, row) in enumerate(elems.rows()) {
-        let row_string = row.to_vec().iter().map(|num| num.to_string()).join("");
-        f.write_str(row_string.as_str())?;
-        if i < elems.nrows() - 1 {
-            f.write_str("\n")?;
-        }
-    }
-    Ok(())
 }
 
 fn inner(lines: Vec<String>) -> (PuzzleResult, PuzzleResult) {
@@ -173,9 +163,8 @@ mod tests {
     use super::*;
     use crate::strings::SkipEmptyLines;
     use itertools::Itertools;
-    use ndarray::{array, Array, Array2, Ix2};
+    use ndarray::array;
     use pretty_assertions::assert_eq;
-    use std::iter::FromIterator;
     use textwrap::dedent;
 
     fn to_vec(f: Vec<&str>) -> Vec<String> {

@@ -18,6 +18,9 @@ pest = {  version="2.7.5", features = ["pretty-print"] }
 pest_derive = "2.7.5"
 anyhow = { version = "1.0.75", features = ["backtrace"] }
 clap = "4.4.10"
+unreachable = { version = "1.0.0", features = [] }
+pretty_assertions = "1.4.0"
+regex-split = "0.1.0"
 
 [dev-dependencies]
 expect-test = "1.4.1"
