@@ -1,14 +1,13 @@
 use crate::files::contents;
 use anyhow::{Context, Result};
-use itertools::{Either, Itertools};
+use itertools::{Itertools};
 use map_macro::hash_set;
 use ndarray::prelude::*;
 use pest::Parser;
 use std::cmp::min;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Write};
-use regex::Regex;
-use regex_split::RegexSplit;
+use std::iter::zip;
 
 type PuzzleResult = u32;
 
@@ -17,13 +16,24 @@ pub fn solution() -> (PuzzleResult, PuzzleResult) {
 }
 
 fn inner(input: &String) -> Result<(PuzzleResult, PuzzleResult)> {
-    let part2 = PuzzleResult::default();
     let grid = parse(input)?;
-    // let part1 = PuzzleResult::default();
-    let part1 = grid
-        .symbols_with_adjacent_part_numbers()
+    let adjacent_symbols = grid
+        .symbols_with_adjacent_part_numbers();
+    let part1 = adjacent_symbols
         .values()
         .flatten()
+        .sum();
+    let part2 = adjacent_symbols
+        .iter()
+        .filter_map(|(key, value)| {
+            let (char, _) = key;
+            if *char == '*' && value.len() == 2 {
+                Some(value)
+            } else {
+                None
+            }
+        })
+        .map(|values| values.iter().product::<PuzzleResult>())
         .sum();
 
     Ok((part1, part2))
@@ -40,6 +50,16 @@ impl Grid {
         Grid {
             elems: Array2::zeros(size),
         }
+    }
+    fn set(&mut self, element: Element) {
+        match element.value {
+            ElementValue::Symbol(symbol) => {
+                self.elems[element.pos] = -(symbol as i32);
+            }
+            ElementValue::Number(num) => {
+                self.elems[element.pos] = num as i32;
+            }
+        };
     }
     fn add(&mut self, element: Element) {
         match element.value {
@@ -58,7 +78,6 @@ impl Grid {
     fn symbols_with_adjacent_part_numbers(&self) -> HashMap<(char, (usize, usize)), HashSet<u32>> {
         let mut ret = HashMap::default();
         let shape = self.elems.shape();
-        // dbg!(&self.elems);
         for i in 0..shape[0] {
             for j in 0..shape[1] {
                 let symbol = self.elems[[i, j]];
@@ -66,18 +85,13 @@ impl Grid {
                     // We only want process this if we're in a symbol (< 0), otherwise it doesn't matter
                     continue;
                 }
-                // dbg!((i, j));
                 let symbol: char = (-symbol as u8) as char;
                 let positions = s![
                     i.saturating_sub(1)..min(i + 2, shape[0]),
                     j.saturating_sub(1)..min(j + 2, shape[1]),
                 ];
-                // dbg!(&positions);
                 let vals = self.elems.slice(positions);
-                // assert_eq!(vals.shape(), [3, 3]);
-                // dbg!(&vals);
                 let part_numbers: HashSet<&i32> = vals.iter().filter(|v| **v > 0).collect();
-                // dbg!(&part_numbers);
                 for part_number in part_numbers {
                     let key = (symbol, (i, j));
                     let entry = ret.entry(key);
@@ -94,6 +108,7 @@ struct Element {
     pos: Pos,
     value: ElementValue,
 }
+#[derive(Copy, Clone)]
 enum ElementValue {
     // Empty,
     Symbol(char),
@@ -103,71 +118,45 @@ enum ElementValue {
 fn parse(input: &String) -> Result<Grid> {
     let lines = input.lines().collect_vec();
     let mut grid = Grid::new((lines.len(), lines[0].len()));
-    let re = Regex::new(r"\D").unwrap();
     for (x, line) in lines.into_iter().enumerate() {
-        // let split = line.split_inclusive(".").collect_vec();
-        let split  = re.split_inclusive(line).collect_vec();
+        // Split all elements together, while keeping numbers into their own group
+        let (numbers, elements): (Vec<bool>, Vec<String>) = line.chars()
+            .group_by(|c| c.is_digit(10))
+            .into_iter()
+            .map(|(is_number, mut group)| {
+                if is_number {
+                    vec![(true, group.join(""))]
+                } else {
+                    group.map(|c| (false, c.to_string())).collect_vec()
+                }
+            })
+            .flatten()
+            // Unzip so that it's easier to debug
+            .unzip();
         let mut y = 0;
-        for elem in split.into_iter() {
+        for (is_number, elem) in zip(numbers, elements) {
             if elem == "." {
                 y += 1;
                 continue;
             }
 
-            // The `split` method is a bit weird and can return items in very different flavors, such as:
-            //
-            // - %.
-            // - *123.
-            // - 123.
-            // - 123 (if it's the last part of the string)
-            //
-            // So we need to handle all cases. For this we discard the chars with `.` and then group them
-            let (number, symbols): (Vec<(String, Pos)>, Vec<(String, Pos)>) = elem
-                // First we group the chars which are digits or not
-                .chars()
-                .filter(|c| *c != '.')
-                .group_by(|c| c.is_digit(10))
-                .into_iter()
-                .map(|(key, mut group)| {
-                    let s = group.join("");
-                    (key, s)
-                })
-                // Now process the groups
-                .enumerate()
-                .partition_map(|(i, (is_number, s))| {
-                    // We assume that the groups returned are in order that they appear in the string
-                    let new_pos = (x, y);
-                    y += s.len();
-                    if is_number {
-                        Either::Left((s, new_pos))
-                    } else {
-                        Either::Right((s, new_pos))
-                    }
-                });
-            y += 1; // Because we dropped the `.`, so we need to increase 1 more time.
-            assert!(number.len() <= 1);
-            let number = number.first();
-
-            if number.is_some() {
-                let (number, pos) = number.unwrap();
-                let val = number.parse::<u32>().context(format!(
-                    "Couldn't parse '{number}', the element from the split is '{elem}', and the line is '{line}'"
-                ))?;
-                grid.add(Element {
-                    pos: *pos,
-                    value: ElementValue::Number(val),
-                });
+            let value = match is_number {
+                true => {
+                    let parsed_value = elem.parse::<u32>().context(format!(
+                        "Couldn't parse '{elem}' from the line '{line}'"
+                    ))?;
+                    ElementValue::Number(parsed_value)
+                },
+                false => {
+                    let c = elem.chars().nth(0).unwrap();
+                    ElementValue::Symbol(c)
+                },
             };
-
-            assert!(symbols.len() <= 1);
-            symbols.first().map(|(symbol, pos)| {
-                for (i, c) in symbol.chars().enumerate() {
-                    grid.add(Element {
-                        pos: (pos.0, pos.1 + i),
-                        value: ElementValue::Symbol(c),
-                    });
-                }
+            grid.add(Element {
+                pos: (x, y),
+                value: value.clone(),
             });
+            y += elem.len();
         }
     }
     Ok(grid)
@@ -216,7 +205,7 @@ mod tests {
     fn test_part2_inner() -> Result<()> {
         let input_string = program();
         let actual = inner(&input_string)?.1;
-        assert_eq!(actual, 0);
+        assert_eq!(actual, 467835);
         Ok(())
     }
 
@@ -255,21 +244,22 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_examples() -> Result<()> {
         // https://www.reddit.com/r/adventofcode/comments/189qyze/comment/kbtg5sd/?utm_source=share&utm_medium=web2x&context=3
-        // let input_string = dedent("
-        //     ........
-        //     .24..4..
-        //     ......*.").skip_empty_start_lines();
-        // let grid = parse(&String::from(input_string))?;
-        // pretty_assert_eq!(grid.elems, array![
-        //     [0, 0, 0, 0, 0, 0, 0, 0],
-        //     [0, 24, 24, 0, 0, 4, 0, 0],
-        //     [0, 0, 0, 0, 0, 0, -42, 0]
-        // ]);
-        // compare_maps(grid.symbols_with_adjacent_part_numbers(), hash_map![
-        //     ('*', (2, 6)) => hash_set![4],
-        // ]);
+        let input_string = dedent("
+            ........
+            .24..4..
+            ......*.").skip_empty_start_lines();
+        let grid = parse(&String::from(input_string))?;
+        pretty_assert_eq!(grid.elems, array![
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 24, 24, 0, 0, 4, 0, 0],
+            [0, 0, 0, 0, 0, 0, -42, 0]
+        ]);
+        compare_maps(grid.symbols_with_adjacent_part_numbers(), hash_map![
+            ('*', (2, 6)) => hash_set![4],
+        ]);
 
         let input_string = dedent("
             ........
@@ -277,13 +267,14 @@ mod tests {
             ......*.").skip_empty_start_lines();
         let grid = parse(&String::from(input_string))?;
         pretty_assert_eq!(grid.elems, array![
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 24, 24, -36, -45, 4, 0, 0],
-            [0, 0, 0, 0, 0, 0, -42, 0]
+            [0,  0,  0,   0,   0, 0,   0, 0],
+            [0, 24, 24, -36, -45, 4,   0, 0],
+            [0,  0,  0,   0,   0, 0, -42, 0]
         ]);
         compare_maps(grid.symbols_with_adjacent_part_numbers(), hash_map![
             ('$', (1, 3)) => hash_set![24],
             ('-', (1, 4)) => hash_set![4],
+            ('*', (2, 6)) => hash_set![4],
         ]);
 
         let input_string = dedent("
