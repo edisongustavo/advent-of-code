@@ -18,6 +18,7 @@ mod files;
 mod geometry;
 mod strings;
 mod array;
+mod asserts;
 
 fn main() {
     // println!("Day1 part1: {}", part1());
@@ -49,4 +50,5 @@ fn main() {
     println!("Day1: {:?}", solutions2023::day1::solution());
     println!("Day2: {:?}", solutions2023::day2::solution());
     println!("Day3: {:?}", solutions2023::day3::solution());
+    println!("Day4: {:?}", solutions2023::day4::solution());
 }

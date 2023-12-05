@@ -1,6 +1,6 @@
 use crate::files::contents;
 use anyhow::{Context, Result};
-use itertools::{Itertools};
+use itertools::Itertools;
 use map_macro::hash_set;
 use ndarray::prelude::*;
 use pest::Parser;
@@ -171,6 +171,7 @@ mod tests {
     use nofmt;
     use pretty_assertions::assert_eq as pretty_assert_eq;
     use textwrap::dedent;
+    use crate::asserts;
 
     fn to_vec(f: Vec<&str>) -> Vec<String> {
         f.into_iter().map(|s| String::from(s)).collect_vec()
@@ -257,7 +258,7 @@ mod tests {
             [0, 24, 24, 0, 0, 4, 0, 0],
             [0, 0, 0, 0, 0, 0, -42, 0]
         ]);
-        compare_maps(grid.symbols_with_adjacent_part_numbers(), hash_map![
+        asserts::compare_maps(grid.symbols_with_adjacent_part_numbers(), hash_map![
             ('*', (2, 6)) => hash_set![4],
         ]);
 
@@ -271,7 +272,7 @@ mod tests {
             [0, 24, 24, -36, -45, 4,   0, 0],
             [0,  0,  0,   0,   0, 0, -42, 0]
         ]);
-        compare_maps(grid.symbols_with_adjacent_part_numbers(), hash_map![
+        asserts::compare_maps(grid.symbols_with_adjacent_part_numbers(), hash_map![
             ('$', (1, 3)) => hash_set![24],
             ('-', (1, 4)) => hash_set![4],
             ('*', (2, 6)) => hash_set![4],
@@ -358,22 +359,7 @@ mod tests {
             ('$', (8, 3)) => hash_set![664],
             ('*', (8, 5)) => hash_set![598, 755],
         ];
-        compare_maps(actual, expected);
+        asserts::compare_maps(actual, expected);
         Ok(())
-    }
-
-    fn compare_maps(actual: HashMap<(char, (usize, usize)), HashSet<u32>>, expected: HashMap<(char, (usize, usize)), HashSet<u32>>) {
-        let actual_keys = actual.keys().sorted().collect_vec();
-        let expected_keys = expected.keys().sorted().collect_vec();
-        assert_eq!(actual_keys, expected_keys);
-        for k in actual.keys().sorted() {
-            let v_actual = actual.get(k).unwrap();
-            let v_expected = expected.get(k).unwrap();
-            assert_eq!(
-                v_actual, v_expected,
-                "Different values for key '{k:?}'.\nActual:   {v_actual:?}\nExpected: {v_expected:?}\n"
-            );
-        }
-        assert_eq!(actual, expected);
     }
 }

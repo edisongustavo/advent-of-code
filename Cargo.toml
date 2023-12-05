@@ -21,6 +21,7 @@ clap = "4.4.10"
 unreachable = { version = "1.0.0", features = [] }
 pretty_assertions = "1.4.0"
 regex-split = "0.1.0"
+num = "0.4.1"
 
 [dev-dependencies]
 expect-test = "1.4.1"
