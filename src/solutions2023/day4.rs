@@ -39,21 +39,26 @@ fn inner(input: &String) -> Result<(PuzzleResult, PuzzleResult)> {
         .iter()
         .map(|(winners, numbers)| numbers.intersection(winners).count())
         .collect_vec();
+    let mut memory: Vec<Option<usize>> = Vec::with_capacity(cards.len());
+    memory.resize(cards.len(), None);
+    fn number_of_scratchcards_produced_by(card: usize, num_intersecting: &Vec<usize>, memory: &mut Vec<Option<usize>>) -> usize {
+        let mem = memory[card];
+        if mem.is_some() {
+            return mem.unwrap();
+        }
+        let intersecting = num_intersecting[card];
+        let mut ret = 1;
+        for i in 0..intersecting {
+            let copy = card + i + 1;
+            ret += number_of_scratchcards_produced_by(copy, num_intersecting, memory);
+        }
+        memory[card] = Some(ret);
+        ret
+    }
     let mut ret = 0;
-    let mut cards_to_process: VecDeque<usize> = (0..cards.len()).collect();
-    while !cards_to_process.is_empty() {
-        let original = cards_to_process.pop_front();
-        if original.is_none() {
-            break;
-        }
-        let original = original.unwrap();
-        let intersecting = num_intersecting[original];
-
-        ret += 1;
-        for copy in 0..intersecting {
-            let index = original + copy + 1;
-            cards_to_process.push_back(index);
-        }
+    for card in 0..cards.len() {
+        let cards_won = number_of_scratchcards_produced_by(card, &num_intersecting, &mut memory);
+        ret += cards_won;
     }
     let part2 = ret;
 
