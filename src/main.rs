@@ -53,4 +53,5 @@ fn main() {
     println!("Day4: {:?}", solutions2023::day4::solution());
     // Day5 needs to run with cargo run --release
     // println!("Day5: {:?}", solutions2023::day5::solution());
+    println!("Day6: {:?}", solutions2023::day6::solution());
 }
